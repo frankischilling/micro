@@ -38,3 +38,6 @@ replace github.com/kballard/go-shellquote => github.com/micro-editor/go-shellquo
 replace layeh.com/gopher-luar v1.0.11 => github.com/layeh/gopher-luar v1.0.11
 
 go 1.19
+
+// Pending https://github.com/zyedidia/clipper/pull/6; use an upstream revision after merge.
+replace github.com/zyedidia/clipper => github.com/frankischilling/clipper v0.1.2-0.20260908202249-3095b365e472

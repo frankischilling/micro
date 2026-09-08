@@ -10,6 +10,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
+github.com/frankischilling/clipper v0.1.2-0.20260908202249-3095b365e472 h1:cZSjj8ZEpT9nPm3rMLfND9qUI/qP4wZtf92eL4NNCco=
+github.com/frankischilling/clipper v0.1.2-0.20260908202249-3095b365e472/go.mod h1:7YApPNiiTZTXdKKZG92G50qj6mnWEX975Sdu65J7YpQ=
 github.com/gdamore/encoding v1.0.0 h1:+7OoQ1Bc6eTm5niUzBa0Ctsh6JbMW6Ra+YNuAtDBdko=
 github.com/gdamore/encoding v1.0.0/go.mod h1:alR0ol34c49FCSBLjhosxzcPHQbf2trDkoo5dl+VrEg=
 github.com/go-errors/errors v1.0.1 h1:LUHzmkK3GUKUrL/1gfBUxAHzcev3apQlezX/+O7ma6w=
@@ -51,8 +53,6 @@ github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81P
 github.com/yuin/gopher-lua v0.0.0-20190206043414-8bfc7677f583/go.mod h1:gqRgreBUhTSL0GeU64rtZ3Uq3wtjOa/TB2YfrtkCbVQ=
 github.com/yuin/gopher-lua v1.1.1 h1:kYKnWBjvbNP4XLT3+bPEwAXJx262OhaHDWDVOPjL46M=
 github.com/yuin/gopher-lua v1.1.1/go.mod h1:GBR0iDaNXjAgGg9zfCvksxSRnQx76gclCIb7kdAd1Pw=
-github.com/zyedidia/clipper v0.1.1 h1:HBgguFNDq/QmSQKBnhy4sMKzILINr139VEgAhftOUTw=
-github.com/zyedidia/clipper v0.1.1/go.mod h1:7YApPNiiTZTXdKKZG92G50qj6mnWEX975Sdu65J7YpQ=
 github.com/zyedidia/glob v0.0.0-20170209203856-dd4023a66dc3 h1:oMHjjTLfGXVuyOQBYj5/td9WC0mw4g1xDBPovIqmHew=
 github.com/zyedidia/glob v0.0.0-20170209203856-dd4023a66dc3/go.mod h1:YKbIYP//Eln8eDgAJGI3IDvR3s4Tv9Z9TGIOumiyQ5c=
 github.com/zyedidia/poller v1.0.1 h1:Tt9S3AxAjXwWGNiC2TUdRJkQDZSzCBNVQ4xXiQ7440s=

@@ -38,7 +38,7 @@ func (c *controlledClipboard) WriteAll(reg string, text []byte) error {
 func setupClipboard(t *testing.T) *controlledClipboard {
 	t.Helper()
 	t.Setenv("PATH", t.TempDir())
-	savedClips, savedExternal, savedMethod := clipper.Clipboards, external, CurrentMethod
+	savedClips, savedClipboard, savedMethod := clipper.Clipboards, clipboard, CurrentMethod
 	savedInternal, savedMulti := internal, multi
 	c := &controlledClipboard{
 		started: make(chan struct{}, 10),
@@ -46,15 +46,15 @@ func setupClipboard(t *testing.T) *controlledClipboard {
 		text:    make(map[string][]byte),
 	}
 	clipper.Clipboards = []clipper.Clipboard{c}
-	external = nil
+	clipboard = nil
 	internal = make(internalClipboard)
 	multi = make(multiClipboard)
 	t.Cleanup(func() {
 		c.finish()
-		if external != nil {
-			waitFor(t, external.done, "clipboard cleanup")
+		if clipboard != nil {
+			clipboard.Init()
 		}
-		clipper.Clipboards, external, CurrentMethod = savedClips, savedExternal, savedMethod
+		clipper.Clipboards, clipboard, CurrentMethod = savedClips, savedClipboard, savedMethod
 		internal, multi = savedInternal, savedMulti
 	})
 	return c
@@ -74,6 +74,22 @@ func waitFor(t *testing.T, ch <-chan struct{}, operation string) {
 	case <-ch:
 	case <-time.After(5 * time.Second):
 		t.Fatalf("timed out waiting for %s", operation)
+	}
+}
+
+func TestInitializeFailureUsesInternalClipboard(t *testing.T) {
+	c := setupClipboard(t)
+	c.err = errors.New("clipboard unavailable")
+	c.finish()
+	SetMethod("external")
+	if err := Initialize(External); err == nil {
+		t.Fatal("external initialization should fail")
+	}
+	if CurrentMethod != Internal {
+		t.Fatalf("failed initialization left method %v; want Internal", CurrentMethod)
+	}
+	if err := checkRegister(ClipboardReg); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -145,7 +161,7 @@ func TestInitAsyncPreservesLaterMethod(t *testing.T) {
 				t.Fatal(err)
 			}
 			c.finish()
-			waitFor(t, external.done, "failed detection")
+			clipboard.Init()
 			if CurrentMethod != selected {
 				t.Fatalf("detection changed method to %v; want %v", CurrentMethod, selected)
 			}
@@ -300,11 +316,15 @@ func TestExternalClipboardWaitsForDetection(t *testing.T) {
 func TestPendingDetectionIsReused(t *testing.T) {
 	c := setupClipboard(t)
 	startBlockedDetection(t, c)
-	pending := external
-	for _, refresh := range []bool{false, true} {
-		if d := detect(refresh); d != pending {
-			t.Fatal("a new probe replaced detection that was still in progress")
-		}
+	InitAsync(External)
+	c.finish()
+	if err := clipboard.Init(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-c.started:
+		t.Fatal("repeated startup initialization probed the backend again")
+	default:
 	}
 }
 
@@ -313,14 +333,18 @@ func TestFailedDetectionFallsBackAndCanBeRetried(t *testing.T) {
 	c.err = errors.New("clipboard unavailable")
 	startBlockedDetection(t, c)
 	c.finish()
-	waitFor(t, external.done, "failed detection")
+	clipboard.Init()
 	for _, r := range []Register{ClipboardReg, PrimaryReg} {
 		if err := checkRegister(r); err != nil {
 			t.Fatal(err)
 		}
 	}
+	if CurrentMethod != Internal {
+		t.Fatalf("failed detection left method %v; want Internal", CurrentMethod)
+	}
 	// Explicit initialization can discover a backend installed after startup.
 	c.err = nil
+	SetMethod("external")
 	if err := Initialize(External); err != nil {
 		t.Fatal(err)
 	}

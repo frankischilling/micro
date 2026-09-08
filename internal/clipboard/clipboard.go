@@ -37,68 +37,47 @@ const (
 	PrimaryReg = -2
 )
 
-// Each detection attempt owns its result. The worker never changes the selected
-// method, and readers must wait for done before accessing clipboard or err.
-type clipboardDetection struct {
-	done      chan struct{}
-	clipboard clipper.Clipboard
-	err       error
-}
+var clipboard clipper.Clipboard
 
-var external *clipboardDetection
-
-// detect starts a probe or reuses the current result. Explicit initialization
-// refreshes completed probes so changes to installed tools can be picked up.
-// Like the clipboard registers and selected method, external is owned by the
-// editor goroutine; only the result inside a detection is written by its worker.
-func detect(refresh bool) *clipboardDetection {
-	if external != nil {
-		select {
-		case <-external.done:
-			if !refresh {
-				return external
-			}
-		default:
-			return external
-		}
-	}
-
-	clips := make([]clipper.Clipboard, 0, len(clipper.Clipboards)+1)
-	clips = append(clips, &clipper.Custom{Name: "micro-clip"})
-	clips = append(clips, clipper.Clipboards...)
-	d := &clipboardDetection{done: make(chan struct{})}
-	external = d
-	go func() {
-		d.clipboard, d.err = clipper.GetClipboard(clips...)
-		close(d.done)
-	}()
-	return d
-}
-
-// Initialize waits for clipboard detection using the given method. A completed
-// external probe is refreshed; a probe already in progress is shared.
+// Initialize refreshes clipboard detection using the given method and waits
+// for the result.
 func Initialize(m Method) error {
 	if m != External {
 		return nil
 	}
-	d := detect(true)
-	<-d.done
-	return d.err
+	if clipboard != nil {
+		// Finish any pending detection before reusing its backend objects.
+		clipboard.Init()
+	}
+	clipboard = nil
+	InitAsync(m)
+	err := clipboard.Init()
+	if err != nil && CurrentMethod == External {
+		CurrentMethod = Internal
+	}
+	return err
 }
 
-// InitAsync starts clipboard detection without waiting, logging any failure.
+// InitAsync starts clipboard detection without waiting.
 // Only external system clipboard operations need to wait for the result.
 func InitAsync(m Method) {
-	if m != External {
+	if m != External || clipboard != nil {
 		return
 	}
-	d := detect(false)
-	go func() {
-		<-d.done
-		if d.err != nil {
-			log.Println(d.err, " or change 'clipboard' option")
-		}
-	}()
+	clips := make([]clipper.Clipboard, 0, len(clipper.Clipboards)+1)
+	clips = append(clips, &clipper.Custom{Name: "micro-clip"})
+	clips = append(clips, clipper.Clipboards...)
+	clipboard = clipper.GetClipboardAsync(clips...)
+}
+
+func externalReady() bool {
+	InitAsync(External)
+	if err := clipboard.Init(); err != nil {
+		log.Println(err, " or change 'clipboard' option")
+		CurrentMethod = Internal
+		return false
+	}
+	return true
 }
 
 // SetMethod changes the clipboard access method
@@ -158,17 +137,15 @@ func read(r Register, m Method) (string, error) {
 		if r != ClipboardReg && r != PrimaryReg {
 			return internal.read(r), nil
 		}
-		d := detect(false)
-		<-d.done
-		if d.err != nil {
+		if !externalReady() {
 			return internal.read(r), nil
 		}
 		switch r {
 		case ClipboardReg:
-			b, e := d.clipboard.ReadAll(clipper.RegClipboard)
+			b, e := clipboard.ReadAll(clipper.RegClipboard)
 			return string(b), e
 		case PrimaryReg:
-			b, e := d.clipboard.ReadAll(clipper.RegPrimary)
+			b, e := clipboard.ReadAll(clipper.RegPrimary)
 			return string(b), e
 		}
 	case Internal:
@@ -195,17 +172,15 @@ func write(text string, r Register, m Method) error {
 			internal.write(text, r)
 			return nil
 		}
-		d := detect(false)
-		<-d.done
-		if d.err != nil {
+		if !externalReady() {
 			internal.write(text, r)
 			return nil
 		}
 		switch r {
 		case ClipboardReg:
-			return d.clipboard.WriteAll(clipper.RegClipboard, []byte(text))
+			return clipboard.WriteAll(clipper.RegClipboard, []byte(text))
 		case PrimaryReg:
-			return d.clipboard.WriteAll(clipper.RegPrimary, []byte(text))
+			return clipboard.WriteAll(clipper.RegPrimary, []byte(text))
 		}
 	case Internal:
 		internal.write(text, r)
